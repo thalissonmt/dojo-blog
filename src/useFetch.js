@@ -3,12 +3,15 @@ import { useState, useEffect } from 'react'
 const useFetch = (url) => {
     const [data, setData] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState(null)
+    const [error, setError] = useState(null);
 
     useEffect(() => {
-        fetch(url)
+        const abortController = new AbortController()
+
+        fetch(url, { signal: abortController.signal })
             .then(res => {
                 if (!res.ok) {
+                    console.log(res)
                     throw Error('could not fetch the data for that resource')
                 }
                 return res.json();
@@ -19,10 +22,14 @@ const useFetch = (url) => {
                 setError(null);
             })
             .catch(err => {
-                setIsLoading(false);
-                setError(err.message);
-            })
-    }, []);
+                if (err.name !== 'AbortError') {
+                    setIsLoading(false);
+                    setError(err.message);
+                }
+            });
+
+        return () => abortController.abort()
+    }, [url]);
 
     return { data, isLoading, error }
 }
